@@ -3,13 +3,17 @@ package com.engage.entity;
 
 public class Notification {
   private Integer id;
+  private String type;
   private String enagagementName;
   private String message;
   private String title;
+  private Long timebasedTime;
   private Long dropOffInterval;
   private String stage;
   private String deeplink;
   private String imageUrl;
+  private String api_server_key;
+  private String gcmId;
 
   public Notification() {
   }
@@ -88,6 +92,38 @@ public class Notification {
 
   public void setImageUrl(String imageUrl) {
     this.imageUrl = imageUrl;
+  }
+
+  public String getApi_server_key() {
+    return api_server_key;
+  }
+
+  public void setApi_server_key(String api_server_key) {
+    this.api_server_key = api_server_key;
+  }
+
+  public String getGcmId() {
+    return gcmId;
+  }
+
+  public void setGcmId(String gcmId) {
+    this.gcmId = gcmId;
+  }
+
+  public String getType() {
+    return type;
+  }
+
+  public void setType(String type) {
+    this.type = type;
+  }
+
+  public Long getTimebasedTime() {
+    return timebasedTime;
+  }
+
+  public void setTimebasedTime(Long timebasedTime) {
+    this.timebasedTime = timebasedTime;
   }
 
   @Override

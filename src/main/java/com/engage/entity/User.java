@@ -22,7 +22,11 @@ public class User {
   }
 
   public User(String analyzeData) {
+    try {
     parseAnalyzeData(analyzeData);
+    } catch (Exception e) {
+      System.out.println(e.toString());
+    }
   }
 
   public String getVizId() {

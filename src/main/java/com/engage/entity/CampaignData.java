@@ -1,12 +1,21 @@
 
 package com.engage.entity;
 
+import com.engage.manager.CampaignDataManager;
+
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 public class CampaignData {
   private String campaignId;
+  private String vizId;
   private Integer message_per_day;
   private String api_server_key;
   private Long subsequent_push_interval;
@@ -25,6 +34,14 @@ public class CampaignData {
 
   public void setCampaignId(String campaignId) {
     this.campaignId = campaignId;
+  }
+
+  public String getVizId() {
+    return vizId;
+  }
+
+  public void setVizId(String vizId) {
+    this.vizId = vizId;
   }
 
   public Integer getMessage_per_day() {
@@ -66,20 +83,41 @@ public class CampaignData {
     while (st.hasMoreElements()) {
       values[i++] = (String) st.nextElement();
     }
+    this.vizId = values[3];
     this.campaignId = values[9];
-    getCampaignDataFromDB();
+    fillCampaignDataFromMaps(getGcmId(values));
   }
 
-  private void getCampaignDataFromDB() {
-    this.message_per_day = 40;
-    this.api_server_key = "blah";
-    this.subsequent_push_interval = 20l;
+  private String getGcmId(String[] values) {
+    String url = values[5];
+    String[] pairs = url.split("&");
+    Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+    for (String pair : pairs) {
+      if (StringUtils.isBlank(pair))
+        continue;
+      int idx = pair.indexOf("=");
+      try {
+        query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"),
+            URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
+      } catch (UnsupportedEncodingException e) {
+        System.out.println(e.toString());
+      }
+    }
+    return query_pairs.get("gcmid");
+  }
+
+  private void fillCampaignDataFromMaps(String gcmId) {
+    CampaignSetting campaignSetting = CampaignDataManager.campaignSettingsMap.get(campaignId);
+    this.message_per_day = campaignSetting.getMessage_per_day();
+    this.api_server_key = campaignSetting.getApi_server_key();
+    this.subsequent_push_interval = campaignSetting.getSubsequent_push_interval();
+    List<Integer> notificationIds = CampaignDataManager.campaignNotificationsMap.get(campaignId);
     this.notifications = new ArrayList<Notification>();
-    for (int i = 0; i < 5; i++) {
-      Notification temp = new Notification(1, "engagement_name", "message", "title", 900l, "e400",
-          "http://www.koovs.com/koovs-light-weight-pocket-tee_285-80076.html?skuid=327146&utm_source=vizury&utm_medium=push&utm_campaign=Bag+dropoff+-+Andr+-+1608&utm_term=Add+to+Cart%2FBag+-+Dropoffs&utm_content=android&",
-          "http://cdn8.vizury.com/images2/get.php?c=VIZVRM4271&f=http%3A%2F%2Fimages.kooves.com%2Fuploads%2Fproducts%2F80076_5c53cc62397b190995f9d718d33fa545_image1_default.jpg&s=3649226315&pad=1&bdw=20&bdc=ffffff");
-      this.notifications.add(temp);
+    for (Integer id : notificationIds) {
+      Notification notification = CampaignDataManager.notificationsMap.get(id);
+      notification.setApi_server_key(api_server_key);
+      notification.setGcmId(gcmId);
+      this.notifications.add(notification);
     }
   }
 

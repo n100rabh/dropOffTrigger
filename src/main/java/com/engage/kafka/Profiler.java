@@ -2,7 +2,6 @@
 package com.engage.kafka;
 
 import com.engage.cache.RedisDataStore;
-import com.engage.entity.CampaignData;
 import com.engage.entity.User;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -14,29 +13,40 @@ import java.io.IOException;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 
-public class ConsumedDataProcessor implements Runnable {
+public class Profiler implements Runnable {
   private static RedisDataStore redisDataStore = new RedisDataStore("");
   private static ObjectMapper objectMapper = new ObjectMapper();
   private KafkaStream m_stream;
   private int m_threadNumber;
 
-  public ConsumedDataProcessor(KafkaStream a_stream, int a_threadNumber) {
+  Notifier notifier = new Notifier();
+
+  public Profiler(KafkaStream a_stream, int a_threadNumber) {
     m_threadNumber = a_threadNumber;
     m_stream = a_stream;
+    Thread t = new Thread(this, "Profiler thread " + a_threadNumber);
+    t.start();
+
   }
 
   public void run() {
     ConsumerIterator<byte[], byte[]> it = m_stream.iterator();
     while (it.hasNext()) {
       String analyzeData = new String(it.next().message());
-      System.out.println("Thread " + m_threadNumber + ": " + analyzeData);
-      updateRedis(analyzeData);
+      System.out.println("Profiler: Thread " + m_threadNumber + ": " + analyzeData);
+      try {
+        // update redis of profiler
+        updateRedis(analyzeData);
+        // u[pdate redis of notifiers
+        notifier.updateRedis(analyzeData);
+      } catch (Exception e) {
+        System.out.println("Excpetiin " + e);
+      }
     }
     System.out.println("Shutting down Thread: " + m_threadNumber);
   }
 
   public void updateRedis(String analyzeData) {
-    CampaignData campaignData = new CampaignData(analyzeData);
     User newUser = new User(analyzeData);
     System.out.println(newUser);
     String key = newUser.getAccountId() + "_" + newUser.getVizId();

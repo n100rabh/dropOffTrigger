@@ -29,10 +29,19 @@ public class RedisDataStore {
   /**
    * pool of connections.
    */
-  private JedisPool jedisPool;
+  public static JedisPool jedisPool;
 
   /** Configuration properties for Jedis pool. */
-  private JedisPoolConfig poolConfig;
+  private static JedisPoolConfig poolConfig;
+
+  static {
+    poolConfig = new JedisPoolConfig();
+    poolConfig.setMaxTotal(50);
+    poolConfig.setTestOnBorrow(true);
+    poolConfig.setTestOnReturn(true);
+    poolConfig.setLifo(false);
+    jedisPool = new JedisPool(poolConfig, "10.0.72.66", 6379, 10000);
+  }
 
   /**
    * Creates a RedisDataStore instance.
@@ -42,12 +51,12 @@ public class RedisDataStore {
    *          Redis
    */
   public RedisDataStore(String redisProperties) {
-    poolConfig = new JedisPoolConfig();
-    poolConfig.setMaxTotal(50);
-    poolConfig.setTestOnBorrow(true);
-    poolConfig.setTestOnReturn(true);
-    poolConfig.setLifo(false);
-    jedisPool = new JedisPool(poolConfig, "localhost", 6379, 50);
+    // poolConfig = new JedisPoolConfig();
+    // poolConfig.setMaxTotal(50);
+    // poolConfig.setTestOnBorrow(true);
+    // poolConfig.setTestOnReturn(true);
+    // poolConfig.setLifo(false);
+    // jedisPool = new JedisPool(poolConfig, "localhost", 6379, 50);
     // jedisPool = new JedisPool(poolConfig,
     // StringUtils.isBlank(redisProperties.getString("hostname")) ? "localhost"
     // : redisProperties.getString("hostname"), IntegerUtils.parseInt(
@@ -202,11 +211,49 @@ public class RedisDataStore {
     }
   }
 
+  public void setStringWithExpiry(Map<String, Integer> keyValueMap) {
+    if (keyValueMap != null && !keyValueMap.isEmpty()) {
+      Jedis jedis = null;
+      try {
+        jedis = jedisPool.getResource();
+        Pipeline pipeline = jedis.pipelined();
+        for (Entry<String, Integer> entry : keyValueMap.entrySet()) {
+          pipeline.setex(entry.getKey(), entry.getValue(), entry.getValue().toString());
+        }
+        pipeline.sync();
+      } catch (JedisException ex) {
+        System.out.println(ex.getMessage());
+      } finally {
+        if (jedis != null) {
+          jedis.close();
+        }
+      }
+    }
+  }
+
   public void putData(String key, String value) {
     Jedis jedis = null;
     try {
       jedis = jedisPool.getResource();
       jedis.set(key, value);
+    } catch (JedisException ex) {
+      System.out.println(ex.getMessage());
+    } finally {
+      if (jedis != null) {
+        jedis.close();
+      }
+    }
+  }
+
+  public void deleteKey(Integer notificationId) {
+    Jedis jedis = null;
+
+    try {
+      jedis = jedisPool.getResource();
+      Set<String> keys = jedis.keys(notificationId + "_");
+      for (String key : keys) {
+        jedis.del(key);
+      }
     } catch (JedisException ex) {
       System.out.println(ex.getMessage());
     } finally {

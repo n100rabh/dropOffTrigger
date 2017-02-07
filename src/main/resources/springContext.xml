@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+  <bean id="campaignDataManager" class="com.engage.manager.CampaignDataManager" />
+
+  <bean id="campaignMapRefreshJob" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+    <property name="targetObject" ref="campaignDataManager" />
+    <property name="targetMethod" value="loadMaps" />
+  </bean>
+
+  <bean id="campaignMapCronTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+    <property name="jobDetail" ref="campaignMapRefreshJob" />
+    <property name="cronExpression" value="0 0/2 * * * ?" />
+    <property name="startDelay" value="0" />
+  </bean>
+
+  <bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+    <property name="jobDetails">
+      <list>
+        <ref bean="campaignMapRefreshJob" />
+      </list>
+    </property>
+    <property name="triggers">
+      <list>
+        <ref bean="campaignMapCronTrigger" />
+      </list>
+    </property>
+  </bean>
+
+  <bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+    <property name="corePoolSize" value="10" />
+    <property name="maxPoolSize" value="50" />
+    <property name="WaitForTasksToCompleteOnShutdown" value="true" />
+  </bean>
+
+</beans>
